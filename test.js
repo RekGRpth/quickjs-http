@@ -1,13 +1,14 @@
-#!/bin/env -S qjs -m
+//#!/usr/bin/env qjs -m
+
 import * as http from "./http-server.js";
 import * as os from 'os';
 
-var mainProcName = scriptArgs[0].match(/.*\/(.*)/)[1] || scriptArgs[0];
+var mainProcName = 'qwe';//scriptArgs[0].match(/.*\/(.*)/)[1] || scriptArgs[0];
 try {
     http.setProcName(mainProcName);
     http.start({
-        listen: "localhost",
-        port: 1202,
+        listen: "0.0.0.0",
+        port: 8080,
         minWorkers: 1,
         maxWorkers: 20,
         workerTimeoutSec: 300,
@@ -22,28 +23,29 @@ try {
 function handleRequest(r) {
 //    console.log(http.see(r));
     return {
-        status: 302,
+        status: 200,
         h: {
-            Host: "localhost",
+            //Host: "localhost",
             "Content-Type": "text/plain; charset=utf-8",
-            Location: "https://meet.jit.si/protasenko",
+            //Location: "https://meet.jit.si/protasenko",
         },
-        postprocess: () => {
+        body: 'OK',
+/*        postprocess: () => {
             simpleSendMail("10.8.1.1", 587, "redirect-notify@bkmks.com", "aprotasenko@bkmks.com",
                 `jitsi visited from ${r.h["X-Real-IP"]}`, "Посетители в: https://meet.jit.si/protasenko");
-        }
+        }*/
     };
 }
 
-function simpleFetchUrl(host, port, r) {
+/*function simpleFetchUrl(host, port, r) {
     var conn = http.connect(host, port);
     http.sendHttpRequest(conn, r);
     var resp = http.recvHttpResponse(conn, r.maxBodySize || -1);
     http.close(conn);
     return resp;
-}
+}*/
 
-function simpleSendMail(host, port, from, to, subj, text) {
+/*function simpleSendMail(host, port, from, to, subj, text) {
     var conn = http.connect("10.8.1.1", 587);
     assertResp("220 ");
     assertResp("250 ", `ehlo localhost\n`);
@@ -68,6 +70,6 @@ function simpleSendMail(host, port, from, to, subj, text) {
                 throw new Error(`Unexpected reply: ${resp} in response to: ${cmd}`);
         }
     }
-}
+}*/
 
 

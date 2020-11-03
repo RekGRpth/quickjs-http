@@ -2,7 +2,7 @@ OBJDIR=.obj
 
 CC=gcc
 #-flto 
-CFLAGS=-g -O2 -Wall -MMD -MF $(OBJDIR)/$(@F).d -I/usr/lib/jvm/java/include -I/usr/lib/jvm/java/include/linux -I/opt/app/workload/addon/java/jdk1.8.0_144/include -I/opt/app/workload/addon/java/jdk1.8.0_144/include/linux
+CFLAGS=-g -O2 -Wall -MMD -MF $(OBJDIR)/$(@F).d
 CFLAGS += -Wno-array-bounds -Wno-format-truncation
 AR=gcc-ar
 STRIP=strip
@@ -11,11 +11,11 @@ SHLIB=libhttputil.so
 
 PROGS=$(SHLIB)
 
-all: $(PROGS)
+all: $(PROGS) Makefile
 
-LIB_OBJS=$(OBJDIR)/http-util.o $(OBJDIR)/http_parser.o
+LIB_OBJS=$(OBJDIR)/http-util.o
 
-LIBS=-lm -ldl -lrt
+LIBS=-lm -ldl -lrt -lhttp_parser
 
 $(OBJDIR):
 	mkdir -p $(OBJDIR)

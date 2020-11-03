@@ -1,6 +1,6 @@
-#include "quickjs-libc.h"
+#include <quickjs/quickjs-libc.h>
 #include "cutils.h"
-#include "http_parser.h"
+#include <http_parser.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
