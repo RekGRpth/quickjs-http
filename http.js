@@ -21,6 +21,8 @@ while (true) {
     http.setsockopt(client.sockfd, http.IPPROTO_TCP, http.TCP_NODELAY, 0)
     http.setsockopt(client.sockfd, http.SOL_SOCKET, http.SO_KEEPALIVE, 0)
     console.log(JSON.stringify({fd: client.sockfd, host: client.host, port: client.port}))
+    const request = http.recv(client.sockfd, 0)
+    console.log(JSON.stringify({request: request}))
     http.send(client.sockfd, `${rTEXT}${text.length}${END}${text}`, http.MSG_NOSIGNAL)
     os.close(client.sockfd)
     http.loop()
