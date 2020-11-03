@@ -4,20 +4,20 @@ CC=gcc
 #-flto 
 CFLAGS=-g -O2 -Wall -MMD -MF $(OBJDIR)/$(@F).d
 CFLAGS += -Wno-array-bounds -Wno-format-truncation
-AR=gcc-ar
-STRIP=strip
+#AR=gcc-ar
+#STRIP=strip
 LDFLAGS=-g
-SHLIB=libhttputil.so
+SHLIB=libhttp.so
 
 PROGS=$(SHLIB)
 
-all: $(PROGS) Makefile
+all: $(PROGS)
 
-LIB_OBJS=$(OBJDIR)/http-util.o
+LIB_OBJS=$(OBJDIR)/http.o
 
 LIBS=-lm -ldl -lrt -lhttp_parser
 
-$(OBJDIR):
+$(OBJDIR): Makefile
 	mkdir -p $(OBJDIR)
 
 $(SHLIB): $(OBJDIR) $(LIB_OBJS)
@@ -30,6 +30,4 @@ $(OBJDIR)/%.o: %.c | $(OBJDIR)
 clean:
 	rm -rf $(OBJDIR)/ $(PROGS)
 
-test: all
-
-
+#test: all
