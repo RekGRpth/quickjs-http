@@ -1,7 +1,9 @@
 #include <arpa/inet.h>
 //#include <errno.h>
+//#include <linux/limits.h>
 #include <netdb.h>
 //#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <quickjs/quickjs-libc.h>
 //#include <stdio.h>
 //#include <stdlib.h>
@@ -152,11 +154,14 @@ static const JSCFunctionListEntry js_http_funcs[] = {
     JS_CFUNC_DEF("socket", 3, js_socket),
 #define DEF(x) JS_PROP_INT32_DEF(#x, x, JS_PROP_CONFIGURABLE )
     DEF(AF_INET),
+    DEF(IPPROTO_TCP),
     DEF(SOCK_STREAM),
+    DEF(SO_KEEPALIVE),
     DEF(SOL_SOCKET),
     DEF(SOMAXCONN),
     DEF(SO_REUSEADDR),
     DEF(SO_REUSEPORT),
+    DEF(TCP_NODELAY),
 };
 
 static int js_http_init(JSContext *ctx, JSModuleDef *m) {
