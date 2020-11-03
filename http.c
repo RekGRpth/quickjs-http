@@ -11,11 +11,41 @@
 #include <sys/types.h>
 
 static JSValue js_accept(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-    int sockfd;
+    int sockfd, new_sockfd = -1;
     if (JS_ToInt32(ctx, &sockfd, argv[0])) return JS_EXCEPTION;
-    int new_sockfd = accept(sockfd, NULL, NULL);
+    int af;
+    if (JS_ToInt32(ctx, &af, argv[1])) return JS_EXCEPTION;
+    struct sockaddr_in raddr;
+    struct sockaddr_in6 raddr6;
+    switch (af) {
+        case AF_INET: {
+            socklen_t sin_size = sizeof(raddr);
+            new_sockfd = accept(sockfd, (struct sockaddr *)&raddr, &sin_size);
+        } break;
+        case AF_INET6: {
+            socklen_t sin_size = sizeof(raddr6);
+            new_sockfd = accept(sockfd, (struct sockaddr *)&raddr6, &sin_size);
+        } break;
+    }
+//    int new_sockfd = accept(sockfd, NULL, NULL);
     if (new_sockfd < 0) return JS_ThrowInternalError(ctx, "%m");
-    return JS_NewInt32(ctx, new_sockfd);
+//    return JS_NewInt32(ctx, new_sockfd);
+    JSValue obj = JS_NewArray(ctx);
+    if (JS_IsException(obj)) return obj;
+    JS_DefinePropertyValueUint32(ctx, obj, 0, JS_NewInt32(ctx, new_sockfd), JS_PROP_C_W_E);
+    switch (af) {
+        case AF_INET: {
+            char buf[INET_ADDRSTRLEN];
+            if (inet_ntop(AF_INET, &raddr.sin_addr, (char *__restrict)&buf, INET_ADDRSTRLEN)) JS_DefinePropertyValueUint32(ctx, obj, 1, JS_NewString(ctx, buf), JS_PROP_C_W_E);
+            JS_DefinePropertyValueUint32(ctx, obj, 2, JS_NewInt32(ctx, ntohs(raddr.sin_port)), JS_PROP_C_W_E);
+        } break;
+        case AF_INET6: {
+            char buf[INET6_ADDRSTRLEN];
+            if (inet_ntop(AF_INET6, &raddr6.sin6_addr, (char *__restrict)&buf, INET6_ADDRSTRLEN)) JS_DefinePropertyValueUint32(ctx, obj, 1, JS_NewString(ctx, buf), JS_PROP_C_W_E);
+            JS_DefinePropertyValueUint32(ctx, obj, 2, JS_NewInt32(ctx, ntohs(raddr6.sin6_port)), JS_PROP_C_W_E);
+        } break;
+    }
+    return obj;
 }
 
 static int resolve_host(const char *name_or_ip, int port, struct sockaddr_in *addr4, struct sockaddr_in6 *addr6) {
@@ -68,7 +98,7 @@ static JSValue js_bind(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
         default: return JS_ThrowInternalError(ctx, "Not valid hostname or IP address");
     }
     if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
-    return JS_UNDEFINED;
+    return JS_NewInt32(ctx, af);
 }
 
 static JSValue js_listen(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
@@ -111,7 +141,7 @@ static JSValue js_socket(JSContext *ctx, JSValueConst this_val, int argc, JSValu
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
 static const JSCFunctionListEntry js_http_funcs[] = {
-    JS_CFUNC_DEF("accept", 1, js_accept),
+    JS_CFUNC_DEF("accept", 2, js_accept),
     JS_CFUNC_DEF("bind", 3, js_bind),
     JS_CFUNC_DEF("listen", 2, js_listen),
     JS_CFUNC_DEF("setsockopt", 4, js_setsockopt),
