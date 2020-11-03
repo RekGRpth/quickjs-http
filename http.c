@@ -27,9 +27,7 @@ static JSValue js_accept(JSContext *ctx, JSValueConst this_val, int argc, JSValu
             new_sockfd = accept(sockfd, (struct sockaddr *)&raddr6, &sin_size);
         } break;
     }
-//    int new_sockfd = accept(sockfd, NULL, NULL);
     if (new_sockfd < 0) return JS_ThrowInternalError(ctx, "%m");
-//    return JS_NewInt32(ctx, new_sockfd);
     JSValue obj = JS_NewArray(ctx);
     if (JS_IsException(obj)) return obj;
     JS_DefinePropertyValueUint32(ctx, obj, 0, JS_NewInt32(ctx, new_sockfd), JS_PROP_C_W_E);
@@ -48,27 +46,27 @@ static JSValue js_accept(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     return obj;
 }
 
-static int resolve_host(const char *name_or_ip, int port, struct sockaddr_in *addr4, struct sockaddr_in6 *addr6) {
+static int resolve_host(const char *name_or_ip, int port, struct sockaddr_in *addr, struct sockaddr_in6 *addr6) {
     port = htons(port); // port in network order
-    if (inet_pton(AF_INET, name_or_ip, &addr4->sin_addr)) {
+    if (inet_pton(AF_INET, name_or_ip, &addr->sin_addr)) {
         memset(addr6, 0, sizeof(*addr6));
-        addr4->sin_family = AF_INET;
-        addr4->sin_port = port;
+        addr->sin_family = AF_INET;
+        addr->sin_port = port;
     } else if (inet_pton(AF_INET6, name_or_ip, &addr6->sin6_addr)) {
-        memset(addr4, 0, sizeof(*addr4));
+        memset(addr, 0, sizeof(*addr));
         addr6->sin6_family = AF_INET6;
         addr6->sin6_port = port;
     } else {
         struct addrinfo hints, *ret;
         memset(&hints, 0, sizeof(hints));
-        memset(addr4, 0, sizeof(*addr4));
+        memset(addr, 0, sizeof(*addr));
         memset(addr6, 0, sizeof(*addr6));
         hints.ai_socktype = SOCK_STREAM;
         if (getaddrinfo(name_or_ip, NULL, &hints, &ret)) return -1;
         for (struct addrinfo *cur = ret; cur; cur = cur->ai_next) {
             if (cur->ai_addr->sa_family == AF_INET) {
-                memcpy(addr4, cur->ai_addr, sizeof(*addr4));
-                addr4->sin_port = port;
+                memcpy(addr, cur->ai_addr, sizeof(*addr));
+                addr->sin_port = port;
             } else if (cur->ai_addr->sa_family == AF_INET6) {
                 memcpy(addr6, cur->ai_addr, sizeof(*addr6));
                 addr6->sin6_port = port;
@@ -85,15 +83,15 @@ static JSValue js_bind(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     int port;
     if (JS_ToInt32(ctx, &port, argv[2])) return JS_EXCEPTION;
     const char *host = JS_ToCString(ctx, argv[1]);
-    struct sockaddr_in addr4;
+    struct sockaddr_in addr;
     struct sockaddr_in6 addr6;
-    if (!resolve_host(host, port, &addr4, &addr6)) {
-        if (addr4.sin_family == AF_INET) af = AF_INET;
+    if (!resolve_host(host, port, &addr, &addr6)) {
+        if (addr.sin_family == AF_INET) af = AF_INET;
         else if (addr6.sin6_family == AF_INET6) af = AF_INET6;
     }
     JS_FreeCString(ctx, host);
     switch (af) {
-        case AF_INET: rc = bind(sockfd, (struct sockaddr *)&addr4, sizeof(addr4)); break;
+        case AF_INET: rc = bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)); break;
         case AF_INET6: rc = bind(sockfd, (struct sockaddr *)&addr6, sizeof(addr6)); break;
         default: return JS_ThrowInternalError(ctx, "Not valid hostname or IP address");
     }
