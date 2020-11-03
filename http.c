@@ -102,6 +102,12 @@ static JSValue js_bind(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     return JS_NewInt32(ctx, af);
 }
 
+static JSValue js_fork(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+    pid_t pid = fork();
+    if (pid < 0) return JS_ThrowInternalError(ctx, "%m");
+    return JS_NewInt32(ctx, pid);
+}
+
 static JSValue js_listen(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
     int sockfd;
     if (JS_ToInt32(ctx, &sockfd, argv[0])) return JS_EXCEPTION;
@@ -175,6 +181,7 @@ static JSValue js_socket(JSContext *ctx, JSValueConst this_val, int argc, JSValu
 static const JSCFunctionListEntry js_http_funcs[] = {
     JS_CFUNC_DEF("accept", 2, js_accept),
     JS_CFUNC_DEF("bind", 3, js_bind),
+    JS_CFUNC_DEF("fork", 0, js_fork),
     JS_CFUNC_DEF("listen", 2, js_listen),
     JS_CFUNC_DEF("loop", 0, js_loop),
     JS_CFUNC_DEF("recv", 4, js_recv),
