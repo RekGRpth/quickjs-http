@@ -7,11 +7,21 @@ http.setsockopt(server.sockfd, http.SOL_SOCKET, http.SO_REUSEADDR, 1)
 http.setsockopt(server.sockfd, http.SOL_SOCKET, http.SO_REUSEPORT, 1)
 server.af = http.bind(server.sockfd, server.host, server.port)
 http.listen(server.sockfd, http.SOMAXCONN)
+let time, rTEXT
+function update() {
+    time = (new Date()).toUTCString()
+    rTEXT = `HTTP/1.1 200 OK\r\nServer: j\r\nDate: ${time}\r\nContent-Type: text/plain\r\nContent-Length: `
+    os.setTimeout(update, 100)
+}
+const text = 'Hello, World!'
+const END = '\r\n\r\n'
+update()
 while (true) {
     let [fd, address, port] = http.accept(server.sockfd, server.af)
     http.setsockopt(fd, http.IPPROTO_TCP, http.TCP_NODELAY, 0)
     http.setsockopt(fd, http.SOL_SOCKET, http.SO_KEEPALIVE, 0)
     console.log(JSON.stringify({fd:fd, address: address, port: port}))
+    http.send(fd, `${rTEXT}${text.length}${END}${text}`, http.MSG_NOSIGNAL)
     os.close(fd)
     http.loop()
 }

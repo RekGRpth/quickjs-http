@@ -85,6 +85,7 @@ static JSValue js_bind(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     int port;
     if (JS_ToInt32(ctx, &port, argv[2])) return JS_EXCEPTION;
     const char *host = JS_ToCString(ctx, argv[1]);
+    if (!host) return JS_EXCEPTION;
     struct sockaddr_in addr;
     struct sockaddr_in6 addr6;
     if (!resolve_host(host, port, &addr, &addr6)) {
@@ -114,6 +115,20 @@ static JSValue js_listen(JSContext *ctx, JSValueConst this_val, int argc, JSValu
 static JSValue js_loop(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
     js_std_loop(ctx);
     return JS_UNDEFINED;
+}
+
+static JSValue js_send(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+    int sockfd;
+    if (JS_ToInt32(ctx, &sockfd, argv[0])) return JS_EXCEPTION;
+    int flags;
+    if (JS_ToInt32(ctx, &flags, argv[2])) return JS_EXCEPTION;
+    size_t len;
+    const char *buf = JS_ToCStringLen(ctx, &len, argv[1]);
+    if (!buf) return JS_EXCEPTION;
+    ssize_t rc = send(sockfd, buf, len, flags);
+    if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
+    JS_FreeCString(ctx, buf);
+    return JS_NewInt32(ctx, rc);
 }
 
 static JSValue js_setsockopt(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
@@ -150,6 +165,7 @@ static const JSCFunctionListEntry js_http_funcs[] = {
     JS_CFUNC_DEF("bind", 3, js_bind),
     JS_CFUNC_DEF("listen", 2, js_listen),
     JS_CFUNC_DEF("loop", 0, js_loop),
+    JS_CFUNC_DEF("send", 4, js_send),
     JS_CFUNC_DEF("setsockopt", 4, js_setsockopt),
     JS_CFUNC_DEF("socket", 3, js_socket),
 #define DEF(x) JS_PROP_INT32_DEF(#x, x, JS_PROP_CONFIGURABLE )
