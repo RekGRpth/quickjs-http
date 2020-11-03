@@ -17,11 +17,11 @@ const text = 'Hello, World!'
 const END = '\r\n\r\n'
 update()
 while (true) {
-    let [fd, address, port] = http.accept(server.sockfd, server.af)
-    http.setsockopt(fd, http.IPPROTO_TCP, http.TCP_NODELAY, 0)
-    http.setsockopt(fd, http.SOL_SOCKET, http.SO_KEEPALIVE, 0)
-    console.log(JSON.stringify({fd:fd, address: address, port: port}))
-    http.send(fd, `${rTEXT}${text.length}${END}${text}`, http.MSG_NOSIGNAL)
-    os.close(fd)
+    const client = http.accept(server.sockfd, server.af)
+    http.setsockopt(client.sockfd, http.IPPROTO_TCP, http.TCP_NODELAY, 0)
+    http.setsockopt(client.sockfd, http.SOL_SOCKET, http.SO_KEEPALIVE, 0)
+    console.log(JSON.stringify({fd: client.sockfd, host: client.host, port: client.port}))
+    http.send(client.sockfd, `${rTEXT}${text.length}${END}${text}`, http.MSG_NOSIGNAL)
+    os.close(client.sockfd)
     http.loop()
 }

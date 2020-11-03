@@ -30,19 +30,19 @@ static JSValue js_accept(JSContext *ctx, JSValueConst this_val, int argc, JSValu
         } break;
     }
     if (new_sockfd < 0) return JS_ThrowInternalError(ctx, "%m");
-    JSValue obj = JS_NewArray(ctx);
+    JSValue obj = JS_NewObject(ctx);
     if (JS_IsException(obj)) return obj;
-    JS_DefinePropertyValueUint32(ctx, obj, 0, JS_NewInt32(ctx, new_sockfd), JS_PROP_C_W_E);
+    JS_DefinePropertyValueStr(ctx, obj, "sockfd", JS_NewInt32(ctx, new_sockfd), JS_PROP_C_W_E);
     switch (af) {
         case AF_INET: {
             char buf[INET_ADDRSTRLEN];
-            if (inet_ntop(AF_INET, &raddr.sin_addr, (char *__restrict)&buf, INET_ADDRSTRLEN)) JS_DefinePropertyValueUint32(ctx, obj, 1, JS_NewString(ctx, buf), JS_PROP_C_W_E);
-            JS_DefinePropertyValueUint32(ctx, obj, 2, JS_NewInt32(ctx, ntohs(raddr.sin_port)), JS_PROP_C_W_E);
+            if (inet_ntop(AF_INET, &raddr.sin_addr, (char *__restrict)&buf, INET_ADDRSTRLEN)) JS_DefinePropertyValueStr(ctx, obj, "host", JS_NewString(ctx, buf), JS_PROP_C_W_E);
+            JS_DefinePropertyValueStr(ctx, obj, "port", JS_NewInt32(ctx, ntohs(raddr.sin_port)), JS_PROP_C_W_E);
         } break;
         case AF_INET6: {
             char buf[INET6_ADDRSTRLEN];
-            if (inet_ntop(AF_INET6, &raddr6.sin6_addr, (char *__restrict)&buf, INET6_ADDRSTRLEN)) JS_DefinePropertyValueUint32(ctx, obj, 1, JS_NewString(ctx, buf), JS_PROP_C_W_E);
-            JS_DefinePropertyValueUint32(ctx, obj, 2, JS_NewInt32(ctx, ntohs(raddr6.sin6_port)), JS_PROP_C_W_E);
+            if (inet_ntop(AF_INET6, &raddr6.sin6_addr, (char *__restrict)&buf, INET6_ADDRSTRLEN)) JS_DefinePropertyValueStr(ctx, obj, "host", JS_NewString(ctx, buf), JS_PROP_C_W_E);
+            JS_DefinePropertyValueStr(ctx, obj, "port", JS_NewInt32(ctx, ntohs(raddr6.sin6_port)), JS_PROP_C_W_E);
         } break;
     }
     return obj;
