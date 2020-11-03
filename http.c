@@ -109,6 +109,11 @@ static JSValue js_listen(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     return JS_UNDEFINED;
 }
 
+static JSValue js_loop(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+    js_std_loop(ctx);
+    return JS_UNDEFINED;
+}
+
 static JSValue js_setsockopt(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
     int sockfd;
     if (JS_ToInt32(ctx, &sockfd, argv[0])) return JS_EXCEPTION;
@@ -142,6 +147,7 @@ static const JSCFunctionListEntry js_http_funcs[] = {
     JS_CFUNC_DEF("accept", 2, js_accept),
     JS_CFUNC_DEF("bind", 3, js_bind),
     JS_CFUNC_DEF("listen", 2, js_listen),
+    JS_CFUNC_DEF("loop", 0, js_loop),
     JS_CFUNC_DEF("setsockopt", 4, js_setsockopt),
     JS_CFUNC_DEF("socket", 3, js_socket),
 #define DEF(x) JS_PROP_INT32_DEF(#x, x, JS_PROP_CONFIGURABLE )
