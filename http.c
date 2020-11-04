@@ -4,7 +4,9 @@
 #include <netdb.h>
 //#include <netinet/in.h>
 #include <netinet/tcp.h>
+//#include <pthread.h>
 #include <quickjs/quickjs-libc.h>
+#include <spawn.h>
 //#include <stdio.h>
 //#include <stdlib.h>
 #include <string.h>
@@ -172,9 +174,22 @@ static JSValue js_socket(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     int protocol;
     if (JS_ToInt32(ctx, &protocol, argv[2])) return JS_EXCEPTION;
     int sockfd = socket(domain, type, protocol);
-//    if (sockfd < 0) return JS_ThrowInternalError(ctx, "%d -> %s", errno, strerror(errno));
     if (sockfd < 0) return JS_ThrowInternalError(ctx, "%m");
     return JS_NewInt32(ctx, sockfd);
+}
+
+extern char *const envp[];
+static JSValue js_spawnp(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+    int mode;
+    if (JS_ToInt32(ctx, &mode, argv[0])) return JS_EXCEPTION;
+    const char *arg[argc + 1];
+    arg[argc] = NULL;
+    pid_t pid;
+    for (int i = 1; i < argc; i++) arg[i] = JS_ToCString(ctx, argv[i]);
+    int rc = posix_spawn(&pid, "qjs", NULL, NULL, (char * const*)arg, envp);
+    for (int i = 1; i < argc; i++) JS_FreeCString(ctx, arg[i]);
+    if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
+    return JS_NewInt32(ctx, pid);
 }
 
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
@@ -189,6 +204,7 @@ static const JSCFunctionListEntry js_http_funcs[] = {
     JS_CFUNC_DEF("send", 4, js_send),
     JS_CFUNC_DEF("setsockopt", 4, js_setsockopt),
     JS_CFUNC_DEF("socket", 3, js_socket),
+    JS_CFUNC_DEF("spawnp", 2, js_spawnp),
 #define DEF(x) JS_PROP_INT32_DEF(#x, x, JS_PROP_CONFIGURABLE )
     DEF(AF_INET),
     DEF(IPPROTO_TCP),
