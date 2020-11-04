@@ -2,8 +2,8 @@ OBJDIR=.obj
 
 CC=gcc
 #-flto 
-CFLAGS=-g -O2 -Wall -MMD -MF $(OBJDIR)/$(@F).d
-CFLAGS += -Wno-array-bounds -Wno-format-truncation
+#CFLAGS=-g -O2 -Wall -MMD -MF $(OBJDIR)/$(@F).d
+#CFLAGS += -Wno-array-bounds -Wno-format-truncation
 #AR=gcc-ar
 #STRIP=strip
 LDFLAGS=-g
@@ -15,7 +15,7 @@ all: $(PROGS)
 
 LIB_OBJS=$(OBJDIR)/http.o
 
-LIBS=-lm -ldl -lrt -lhttp_parser
+#LIBS=-lm -ldl -lrt -lhttp_parser -pthread
 
 $(OBJDIR): Makefile
 	mkdir -p $(OBJDIR)

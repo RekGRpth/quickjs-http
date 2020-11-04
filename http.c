@@ -13,6 +13,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+//#include <sys/wait.h>
 #include <unistd.h>
 
 static JSValue js_accept(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
@@ -178,15 +179,17 @@ static JSValue js_socket(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     return JS_NewInt32(ctx, sockfd);
 }
 
-extern char *const envp[];
+extern char **envp;
+//int posix_spawnp(pid_t *pid, const char *file, const posix_spawn_file_actions_t *file_actions, const posix_spawnattr_t *attrp, char *const argv[], char *const envp[]);
+//int posix_spawnp(pid_t *pid, const char *file, const void *file_actions, const void *attrp, char *const argv[], char *const envp[]);
 static JSValue js_spawnp(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
     int mode;
     if (JS_ToInt32(ctx, &mode, argv[0])) return JS_EXCEPTION;
-    const char *arg[argc + 1];
+    char *arg[argc + 1];
     arg[argc] = NULL;
     pid_t pid;
-    for (int i = 1; i < argc; i++) arg[i] = JS_ToCString(ctx, argv[i]);
-    int rc = posix_spawn(&pid, "qjs", NULL, NULL, (char * const*)arg, envp);
+    for (int i = 1; i < argc; i++) arg[i] = (char *)JS_ToCString(ctx, argv[i]);
+    int rc = 0;//posix_spawnp(&pid, "qjs", NULL, NULL, arg, envp);
     for (int i = 1; i < argc; i++) JS_FreeCString(ctx, arg[i]);
     if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
     return JS_NewInt32(ctx, pid);
@@ -233,3 +236,8 @@ JSModuleDef *JS_INIT_MODULE(JSContext *ctx, const char *module_name) {
     JS_AddModuleExportList(ctx, m, js_http_funcs, countof(js_http_funcs));
     return m;
 }
+
+/*int main(int argc, char* argv[]) {
+    printf("qwe");
+    return 0;
+}*/
