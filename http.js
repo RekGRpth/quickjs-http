@@ -8,8 +8,16 @@ http.setsockopt(server.fd, http.SOL_SOCKET, http.SO_REUSEPORT, 1)
 server.af = http.bind(server.fd, server.host, server.port)
 http.listen(server.fd, http.SOMAXCONN)
 console.log(JSON.stringify(server))
+/*let time, rTEXT
+function update() {
+    time = (new Date()).toUTCString()
+    rTEXT = `HTTP/1.1 200 OK\r\nServer: j\r\nDate: ${time}\r\nContent-Type: text/plain\r\nContent-Length: `
+    os.setTimeout(update, 1000)
+    console.log(`${time}`);
+}*/
 const text = 'Hello, World!'
 const END = '\r\n\r\n'
+//update()
 let client
 while (true) try {
     client = http.accept(server.fd, server.af)
