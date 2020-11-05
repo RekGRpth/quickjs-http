@@ -17,8 +17,8 @@
 #include <unistd.h>
 
 static JSValue js_accept(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-    int sockfd, new_sockfd = -1;
-    if (JS_ToInt32(ctx, &sockfd, argv[0])) return JS_EXCEPTION;
+    int fd, new_fd = -1;
+    if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
     int af;
     if (JS_ToInt32(ctx, &af, argv[1])) return JS_EXCEPTION;
     struct sockaddr_in raddr;
@@ -26,17 +26,17 @@ static JSValue js_accept(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     switch (af) {
         case AF_INET: {
             socklen_t sin_size = sizeof(raddr);
-            new_sockfd = accept(sockfd, (struct sockaddr *)&raddr, &sin_size);
+            new_fd = accept(fd, (struct sockaddr *)&raddr, &sin_size);
         } break;
         case AF_INET6: {
             socklen_t sin_size = sizeof(raddr6);
-            new_sockfd = accept(sockfd, (struct sockaddr *)&raddr6, &sin_size);
+            new_fd = accept(fd, (struct sockaddr *)&raddr6, &sin_size);
         } break;
     }
-    if (new_sockfd < 0) return JS_ThrowInternalError(ctx, "%m");
+    if (new_fd < 0) return JS_ThrowInternalError(ctx, "%m");
     JSValue obj = JS_NewObject(ctx);
     if (JS_IsException(obj)) return obj;
-    JS_DefinePropertyValueStr(ctx, obj, "sockfd", JS_NewInt32(ctx, new_sockfd), JS_PROP_C_W_E);
+    JS_DefinePropertyValueStr(ctx, obj, "fd", JS_NewInt32(ctx, new_fd), JS_PROP_C_W_E);
     switch (af) {
         case AF_INET: {
             char buf[INET_ADDRSTRLEN];
@@ -84,8 +84,8 @@ static int resolve_host(const char *name_or_ip, int port, struct sockaddr_in *ad
 }
 
 static JSValue js_bind(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-    int sockfd, rc, af = 0;
-    if (JS_ToInt32(ctx, &sockfd, argv[0])) return JS_EXCEPTION;
+    int fd, rc, af = 0;
+    if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
     int port;
     if (JS_ToInt32(ctx, &port, argv[2])) return JS_EXCEPTION;
     const char *host = JS_ToCString(ctx, argv[1]);
@@ -98,8 +98,8 @@ static JSValue js_bind(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     }
     JS_FreeCString(ctx, host);
     switch (af) {
-        case AF_INET: rc = bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)); break;
-        case AF_INET6: rc = bind(sockfd, (struct sockaddr *)&addr6, sizeof(addr6)); break;
+        case AF_INET: rc = bind(fd, (struct sockaddr *)&addr, sizeof(addr)); break;
+        case AF_INET6: rc = bind(fd, (struct sockaddr *)&addr6, sizeof(addr6)); break;
         default: return JS_ThrowInternalError(ctx, "Not valid hostname or IP address");
     }
     if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
@@ -113,11 +113,11 @@ static JSValue js_fork(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
 }
 
 static JSValue js_listen(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-    int sockfd;
-    if (JS_ToInt32(ctx, &sockfd, argv[0])) return JS_EXCEPTION;
+    int fd;
+    if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
     int backlog;
     if (JS_ToInt32(ctx, &backlog, argv[1])) return JS_EXCEPTION;
-    int rc = listen(sockfd, backlog);
+    int rc = listen(fd, backlog);
     if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
     return JS_UNDEFINED;
 }
@@ -129,40 +129,40 @@ static JSValue js_loop(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
 
 #define BUF_SIZE 1024
 static JSValue js_recv(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-    int sockfd;
-    if (JS_ToInt32(ctx, &sockfd, argv[0])) return JS_EXCEPTION;
+    int fd;
+    if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
     int flags;
     if (JS_ToInt32(ctx, &flags, argv[1])) return JS_EXCEPTION;
     char buf[BUF_SIZE];
-    ssize_t len = recv(sockfd, buf, BUF_SIZE, flags);
+    ssize_t len = recv(fd, buf, BUF_SIZE, flags);
     if (len < 0) return JS_ThrowInternalError(ctx, "%m");
     return JS_NewStringLen(ctx, buf, len);
 }
 
 static JSValue js_send(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-    int sockfd;
-    if (JS_ToInt32(ctx, &sockfd, argv[0])) return JS_EXCEPTION;
+    int fd;
+    if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
     int flags;
     if (JS_ToInt32(ctx, &flags, argv[2])) return JS_EXCEPTION;
     size_t len;
     const char *buf = JS_ToCStringLen(ctx, &len, argv[1]);
     if (!buf) return JS_EXCEPTION;
-    ssize_t rc = send(sockfd, buf, len, flags);
+    ssize_t rc = send(fd, buf, len, flags);
     if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
     JS_FreeCString(ctx, buf);
     return JS_NewInt32(ctx, rc);
 }
 
 static JSValue js_setsockopt(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-    int sockfd;
-    if (JS_ToInt32(ctx, &sockfd, argv[0])) return JS_EXCEPTION;
+    int fd;
+    if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
     int level;
     if (JS_ToInt32(ctx, &level, argv[1])) return JS_EXCEPTION;
     int option;
     if (JS_ToInt32(ctx, &option, argv[2])) return JS_EXCEPTION;
     int value;
     if (JS_ToInt32(ctx, &value, argv[3])) return JS_EXCEPTION;
-    int rc = setsockopt(sockfd, level, option, &value, sizeof(value));
+    int rc = setsockopt(fd, level, option, &value, sizeof(value));
     if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
     return JS_UNDEFINED;
 }
@@ -174,9 +174,9 @@ static JSValue js_socket(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     if (JS_ToInt32(ctx, &type, argv[1])) return JS_EXCEPTION;
     int protocol;
     if (JS_ToInt32(ctx, &protocol, argv[2])) return JS_EXCEPTION;
-    int sockfd = socket(domain, type, protocol);
-    if (sockfd < 0) return JS_ThrowInternalError(ctx, "%m");
-    return JS_NewInt32(ctx, sockfd);
+    int fd = socket(domain, type, protocol);
+    if (fd < 0) return JS_ThrowInternalError(ctx, "%m");
+    return JS_NewInt32(ctx, fd);
 }
 
 extern char **envp;
