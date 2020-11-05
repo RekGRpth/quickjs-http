@@ -23,10 +23,12 @@ while (true) {
     http.setsockopt(client.fd, http.IPPROTO_TCP, http.TCP_NODELAY, 0)
     http.setsockopt(client.fd, http.SOL_SOCKET, http.SO_KEEPALIVE, 0)
     while (true) {
-        const request = http.recv(client.fd, 0)
+        const request = http.recv(client.fd, 128, 0)
         if (!request || !request.length) break
-//        console.log(JSON.stringify({request: request}))
-        http.send(client.fd, `${rTEXT}${text.length}${END}${text}`, http.MSG_NOSIGNAL)
+        console.log(JSON.stringify({request: request}))
+        const response = `${rTEXT}${text.length}${END}${text}`
+        console.log(JSON.stringify({response: response}))
+        http.send(client.fd, response, http.MSG_NOSIGNAL)
     }
     os.close(client.fd)
     http.loop()

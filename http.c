@@ -131,10 +131,12 @@ static JSValue js_loop(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
 static JSValue js_recv(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
     int fd;
     if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
+    int size;
+    if (JS_ToInt32(ctx, &size, argv[1])) return JS_EXCEPTION;
     int flags;
-    if (JS_ToInt32(ctx, &flags, argv[1])) return JS_EXCEPTION;
-    char buf[BUF_SIZE];
-    ssize_t len = recv(fd, buf, BUF_SIZE, flags);
+    if (JS_ToInt32(ctx, &flags, argv[2])) return JS_EXCEPTION;
+    char buf[size];
+    ssize_t len = recv(fd, buf, size, flags);
     if (len < 0) return JS_ThrowInternalError(ctx, "%m");
     return JS_NewStringLen(ctx, buf, len);
 }
@@ -203,8 +205,8 @@ static const JSCFunctionListEntry js_http_funcs[] = {
     JS_CFUNC_DEF("fork", 0, js_fork),
     JS_CFUNC_DEF("listen", 2, js_listen),
     JS_CFUNC_DEF("loop", 0, js_loop),
-    JS_CFUNC_DEF("recv", 4, js_recv),
-    JS_CFUNC_DEF("send", 4, js_send),
+    JS_CFUNC_DEF("recv", 3, js_recv),
+    JS_CFUNC_DEF("send", 3, js_send),
     JS_CFUNC_DEF("setsockopt", 4, js_setsockopt),
     JS_CFUNC_DEF("socket", 3, js_socket),
     JS_CFUNC_DEF("spawnp", 2, js_spawnp),
