@@ -152,7 +152,10 @@ static JSValue js_send(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     const char *buf = JS_ToCStringLen(ctx, &len, argv[1]);
     if (!buf) return JS_EXCEPTION;
     ssize_t rc = send(fd, buf, len, flags);
-    if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
+    if (rc < 0) {
+        if (errno == ENOTSOCK) return JS_NULL;
+        return JS_ThrowInternalError(ctx, "%m");
+    }
     JS_FreeCString(ctx, buf);
     return JS_NewInt32(ctx, rc);
 }

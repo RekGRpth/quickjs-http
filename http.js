@@ -1,3 +1,4 @@
+//seq $(nproc) | xargs -r -n 1 -P "$(nproc)" qjs http.js
 import * as http from "http.so"
 import * as os from "os"
 import * as std from "std"
