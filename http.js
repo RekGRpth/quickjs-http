@@ -31,18 +31,23 @@ os.setReadHandler(server.fd, () => { /*try {*/
             client.response = `${server.rTEXT}${server.text.length}${server.END}${server.text}`
             console.log(JSON.stringify({server: server, client: client}))
             os.setWriteHandler(client.fd, () => {
+                client.request = undefined
                 http.send(client.fd, client.response, http.MSG_NOSIGNAL)
                 os.setWriteHandler(client.fd, null)
+                client.response = undefined
             })
         } else {
             os.setReadHandler(client.fd, null)
             os.close(client.fd)
+            client.fd = undefined
         }
     } catch (exception) {
-        console.log(JSON.stringify({server: server, client: client, exception: exception.message/*, stack: exception?.stack*/}));
+        console.log(JSON.stringify({server: server, client: client, exception: exception.message, stack: exception?.stack}));
 //        console.log((e?.stack || "").replace(/^/mg, time));
         os.setReadHandler(client.fd, null)
+        os.setWriteHandler(client.fd, null)
         os.close(client.fd)
+        client.fd = undefined
     }})
 /*} catch(e) {
     const client_str = JSON.stringify(client)
