@@ -7,7 +7,7 @@ CC=gcc
 #AR=gcc-ar
 #STRIP=strip
 LDFLAGS=-g
-SHLIB=libhttp.so
+SHLIB=http.so
 
 PROGS=$(SHLIB)
 
