@@ -25,36 +25,36 @@ os.setReadHandler(server.fd, () => { /*try {*/
     console.log(JSON.stringify({server: server, client: client}))
     http.setsockopt(client.fd, http.IPPROTO_TCP, http.TCP_NODELAY, 0)
     http.setsockopt(client.fd, http.SOL_SOCKET, http.SO_KEEPALIVE, 0)
-    os.setReadHandler(client.fd, () => { try {
+    os.setReadHandler(client.fd, () => { /*try {*/
         client.request = http.recv(client.fd, 128, 0)
         if (client.request && client.request.length) {
             client.response = `${server.rTEXT}${server.text.length}${server.END}${server.text}`
             console.log(JSON.stringify({server: server, client: client}))
-            os.setWriteHandler(client.fd, () => { try {
+            os.setWriteHandler(client.fd, () => { /*try {*/
                 client.request = undefined
                 http.send(client.fd, client.response, http.MSG_NOSIGNAL)
                 os.setWriteHandler(client.fd, null)
                 client.response = undefined
-            } catch (exception) {
+            /*} catch (exception) {
                 console.log(JSON.stringify({server: server, client: client, exception: exception.message, stack: exception?.stack}));
                 os.setReadHandler(client.fd, null)
                 os.setWriteHandler(client.fd, null)
                 os.close(client.fd)
                 client.fd = undefined
-            }})
+            }*/})
         } else {
             os.setReadHandler(client.fd, null)
             os.close(client.fd)
             client.fd = undefined
         }
-    } catch (exception) {
+    /*} catch (exception) {
         console.log(JSON.stringify({server: server, client: client, exception: exception.message, stack: exception?.stack}));
 //        console.log((e?.stack || "").replace(/^/mg, time));
         os.setReadHandler(client.fd, null)
         os.setWriteHandler(client.fd, null)
         os.close(client.fd)
         client.fd = undefined
-    }})
+    }*/})
 /*} catch(e) {
     const client_str = JSON.stringify(client)
     console.log(`${client_str} ${time} ${e}`);
