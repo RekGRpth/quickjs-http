@@ -16,7 +16,7 @@ const server = {
 server.fd = http.socket(http.AF_INET, http.SOCK_STREAM | http.SOCK_NONBLOCK, 0)
 http.setsockopt(server.fd, http.SOL_SOCKET, http.SO_REUSEADDR, 1)
 http.setsockopt(server.fd, http.SOL_SOCKET, http.SO_REUSEPORT, 1)
-http.bind(server.fd, server.host, server.port)
+server.family = http.bind(server.fd, server.host, server.port)
 //console.log(JSON.stringify(http))
 http.listen(server.fd, http.SOMAXCONN)
 server.update()

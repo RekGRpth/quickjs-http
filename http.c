@@ -22,7 +22,7 @@ static JSValue js_accept(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     struct sockaddr addr;
     socklen_t addrlen;
     int rc = getsockname(fd, &addr, &addrlen);
-    if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
+    if (rc < 0) return JS_ThrowInternalError(ctx, "getsockname(%i): %m", fd);
     struct sockaddr_in addr4;
     struct sockaddr_in6 addr6;
     switch (addr.sa_family) {
@@ -36,7 +36,7 @@ static JSValue js_accept(JSContext *ctx, JSValueConst this_val, int argc, JSValu
         } break;
         default: return JS_UNDEFINED;
     }
-    if (new_fd < 0) return JS_ThrowInternalError(ctx, "%m");
+    if (new_fd < 0) return JS_ThrowInternalError(ctx, "accept(%i): %m", fd);
     JSValue obj = JS_NewObject(ctx);
     if (JS_IsException(obj)) return obj;
     JS_DefinePropertyValueStr(ctx, obj, "fd", JS_NewInt32(ctx, new_fd), JS_PROP_C_W_E);
@@ -91,7 +91,7 @@ static int resolve_host(const char *name_or_ip, int port, struct sockaddr_in *ad
 }
 
 static JSValue js_bind(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-    int fd, rc = -1, af = 0;
+    int fd, rc = -1, family = 0;
     if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
     int port;
     if (JS_ToInt32(ctx, &port, argv[2])) return JS_EXCEPTION;
@@ -100,16 +100,16 @@ static JSValue js_bind(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     struct sockaddr_in addr4;
     struct sockaddr_in6 addr6;
     if (!resolve_host(host, port, &addr4, &addr6)) {
-        if (addr4.sin_family == AF_INET) af = AF_INET;
-        else if (addr6.sin6_family == AF_INET6) af = AF_INET6;
+        if (addr4.sin_family == AF_INET) family = AF_INET;
+        else if (addr6.sin6_family == AF_INET6) family = AF_INET6;
     }
     JS_FreeCString(ctx, host);
-    switch (af) {
+    switch (family) {
         case AF_INET: rc = bind(fd, (struct sockaddr *)&addr4, sizeof(addr4)); break;
         case AF_INET6: rc = bind(fd, (struct sockaddr *)&addr6, sizeof(addr6)); break;
     }
     if (rc < 0) return JS_ThrowInternalError(ctx, "bind(%i): %m", fd);
-    return JS_UNDEFINED;
+    return JS_NewInt32(ctx, family);
 }
 
 static JSValue js_getsockname(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
@@ -118,7 +118,7 @@ static JSValue js_getsockname(JSContext *ctx, JSValueConst this_val, int argc, J
     struct sockaddr addr;
     socklen_t addrlen;
     int rc = getsockname(fd, &addr, &addrlen);
-    if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
+    if (rc < 0) return JS_ThrowInternalError(ctx, "getsockname(%i), %m", fd);
     JSValue obj = JS_NewObject(ctx);
     if (JS_IsException(obj)) return obj;
     switch (addr.sa_family) {
