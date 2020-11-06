@@ -6,7 +6,7 @@
 #include <netinet/tcp.h>
 //#include <pthread.h>
 #include <quickjs/quickjs-libc.h>
-#include <spawn.h>
+//#include <spawn.h>
 //#include <stdio.h>
 //#include <stdlib.h>
 #include <string.h>
@@ -106,12 +106,6 @@ static JSValue js_bind(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     return JS_NewInt32(ctx, af);
 }
 
-static JSValue js_fork(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-    pid_t pid = fork();
-    if (pid < 0) return JS_ThrowInternalError(ctx, "%m");
-    return JS_NewInt32(ctx, pid);
-}
-
 static JSValue js_listen(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
     int fd;
     if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
@@ -186,35 +180,17 @@ static JSValue js_socket(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     return JS_NewInt32(ctx, fd);
 }
 
-extern char **envp;
-//int posix_spawnp(pid_t *pid, const char *file, const posix_spawn_file_actions_t *file_actions, const posix_spawnattr_t *attrp, char *const argv[], char *const envp[]);
-//int posix_spawnp(pid_t *pid, const char *file, const void *file_actions, const void *attrp, char *const argv[], char *const envp[]);
-static JSValue js_spawnp(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-    int mode;
-    if (JS_ToInt32(ctx, &mode, argv[0])) return JS_EXCEPTION;
-    char *arg[argc + 1];
-    arg[argc] = NULL;
-    pid_t pid;
-    for (int i = 1; i < argc; i++) arg[i] = (char *)JS_ToCString(ctx, argv[i]);
-    int rc = 0;//posix_spawnp(&pid, "qjs", NULL, NULL, arg, envp);
-    for (int i = 1; i < argc; i++) JS_FreeCString(ctx, arg[i]);
-    if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
-    return JS_NewInt32(ctx, pid);
-}
-
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
 static const JSCFunctionListEntry js_http_funcs[] = {
     JS_CFUNC_DEF("accept", 2, js_accept),
     JS_CFUNC_DEF("bind", 3, js_bind),
-    JS_CFUNC_DEF("fork", 0, js_fork),
     JS_CFUNC_DEF("listen", 2, js_listen),
     JS_CFUNC_DEF("loop", 0, js_loop),
     JS_CFUNC_DEF("recv", 3, js_recv),
     JS_CFUNC_DEF("send", 3, js_send),
     JS_CFUNC_DEF("setsockopt", 4, js_setsockopt),
     JS_CFUNC_DEF("socket", 3, js_socket),
-    JS_CFUNC_DEF("spawnp", 2, js_spawnp),
 #define DEF(x) JS_PROP_INT32_DEF(#x, x, JS_PROP_CONFIGURABLE )
     DEF(AF_INET),
     DEF(IPPROTO_TCP),
@@ -243,8 +219,3 @@ JSModuleDef *JS_INIT_MODULE(JSContext *ctx, const char *module_name) {
     JS_AddModuleExportList(ctx, m, js_http_funcs, countof(js_http_funcs));
     return m;
 }
-
-/*int main(int argc, char* argv[]) {
-    printf("qwe");
-    return 0;
-}*/
