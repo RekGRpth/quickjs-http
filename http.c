@@ -91,26 +91,25 @@ static int resolve_host(const char *name_or_ip, int port, struct sockaddr_in *ad
 }
 
 static JSValue js_bind(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-    int fd, rc, af = 0;
+    int fd, rc = -1, af = 0;
     if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
     int port;
     if (JS_ToInt32(ctx, &port, argv[2])) return JS_EXCEPTION;
     const char *host = JS_ToCString(ctx, argv[1]);
     if (!host) return JS_EXCEPTION;
-    struct sockaddr_in addr;
+    struct sockaddr_in addr4;
     struct sockaddr_in6 addr6;
-    if (!resolve_host(host, port, &addr, &addr6)) {
-        if (addr.sin_family == AF_INET) af = AF_INET;
+    if (!resolve_host(host, port, &addr4, &addr6)) {
+        if (addr4.sin_family == AF_INET) af = AF_INET;
         else if (addr6.sin6_family == AF_INET6) af = AF_INET6;
     }
     JS_FreeCString(ctx, host);
     switch (af) {
-        case AF_INET: rc = bind(fd, (struct sockaddr *)&addr, sizeof(addr)); break;
+        case AF_INET: rc = bind(fd, (struct sockaddr *)&addr4, sizeof(addr4)); break;
         case AF_INET6: rc = bind(fd, (struct sockaddr *)&addr6, sizeof(addr6)); break;
-        default: return JS_ThrowInternalError(ctx, "Not valid hostname or IP address");
     }
-    if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
-    return JS_NewInt32(ctx, af);
+    if (rc < 0) return JS_ThrowInternalError(ctx, "bind(%i): %m", fd);
+    return JS_UNDEFINED;
 }
 
 static JSValue js_getsockname(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
@@ -150,7 +149,7 @@ static JSValue js_listen(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     int backlog;
     if (JS_ToInt32(ctx, &backlog, argv[1])) return JS_EXCEPTION;
     int rc = listen(fd, backlog);
-    if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
+    if (rc < 0) return JS_ThrowInternalError(ctx, "listen(%i, %i): %m", fd, backlog);
     return JS_UNDEFINED;
 }
 
@@ -170,7 +169,7 @@ static JSValue js_recv(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     ssize_t len = recv(fd, buf, size, flags);
     if (len < 0) {
         if (errno == ECONNRESET) return JS_NULL;
-        return JS_ThrowInternalError(ctx, "%m");
+        return JS_ThrowInternalError(ctx, "recv(%i): %m", fd);
     }
     return JS_NewStringLen(ctx, buf, len);
 }
@@ -186,7 +185,7 @@ static JSValue js_send(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     ssize_t rc = send(fd, buf, len, flags);
     if (rc < 0) {
         if (errno == ENOTSOCK) return JS_NULL;
-        return JS_ThrowInternalError(ctx, "%m");
+        return JS_ThrowInternalError(ctx, "send(%i): %m", fd);
     }
     JS_FreeCString(ctx, buf);
     return JS_NewInt32(ctx, rc);
@@ -202,7 +201,7 @@ static JSValue js_setsockopt(JSContext *ctx, JSValueConst this_val, int argc, JS
     int value;
     if (JS_ToInt32(ctx, &value, argv[3])) return JS_EXCEPTION;
     int rc = setsockopt(fd, level, option, &value, sizeof(value));
-    if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
+    if (rc < 0) return JS_ThrowInternalError(ctx, "setsockopt(%i, %i, %i, %i): %m", fd, level, option, value);
     return JS_UNDEFINED;
 }
 
@@ -214,7 +213,7 @@ static JSValue js_socket(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     int protocol;
     if (JS_ToInt32(ctx, &protocol, argv[2])) return JS_EXCEPTION;
     int fd = socket(domain, type, protocol);
-    if (fd < 0) return JS_ThrowInternalError(ctx, "%m");
+    if (fd < 0) return JS_ThrowInternalError(ctx, "socket(%i, %i, %i): %m", domain, type, protocol);
     return JS_NewInt32(ctx, fd);
 }
 
