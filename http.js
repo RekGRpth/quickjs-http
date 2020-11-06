@@ -30,12 +30,18 @@ os.setReadHandler(server.fd, () => { /*try {*/
         if (client.request.length) {
             client.response = `${server.rTEXT}${server.text.length}${server.END}${server.text}`
             console.log(JSON.stringify({server: server, client: client}))
-            os.setWriteHandler(client.fd, () => {
+            os.setWriteHandler(client.fd, () => { try {
                 client.request = undefined
                 http.send(client.fd, client.response, http.MSG_NOSIGNAL)
                 os.setWriteHandler(client.fd, null)
                 client.response = undefined
-            })
+            } catch (exception) {
+                console.log(JSON.stringify({server: server, client: client, exception: exception.message, stack: exception?.stack}));
+                os.setReadHandler(client.fd, null)
+                os.setWriteHandler(client.fd, null)
+                os.close(client.fd)
+                client.fd = undefined
+            }})
         } else {
             os.setReadHandler(client.fd, null)
             os.close(client.fd)
