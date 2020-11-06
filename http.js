@@ -30,7 +30,10 @@ os.setReadHandler(server.fd, () => { /*try {*/
         if (client.request.length) {
             client.response = `${server.rTEXT}${server.text.length}${server.END}${server.text}`
             console.log(JSON.stringify({server: server, client: client}))
-            http.send(client.fd, client.response, http.MSG_NOSIGNAL)
+            os.setWriteHandler(client.fd, () => {
+                http.send(client.fd, client.response, http.MSG_NOSIGNAL)
+                os.setWriteHandler(client.fd, null)
+            })
         } else {
             os.setReadHandler(client.fd, null)
             os.close(client.fd)
