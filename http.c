@@ -193,6 +193,8 @@ static const JSCFunctionListEntry js_http_funcs[] = {
     JS_CFUNC_DEF("socket", 3, js_socket),
 #define DEF(x) JS_PROP_INT32_DEF(#x, x, JS_PROP_CONFIGURABLE )
     DEF(AF_INET),
+    DEF(AF_INET6),
+    DEF(AF_UNSPEC),
     DEF(IPPROTO_TCP),
     DEF(SOCK_STREAM),
     DEF(SO_KEEPALIVE),
@@ -200,6 +202,9 @@ static const JSCFunctionListEntry js_http_funcs[] = {
     DEF(SOMAXCONN),
     DEF(SO_REUSEADDR),
     DEF(SO_REUSEPORT),
+    DEF(STDERR_FILENO),
+    DEF(STDIN_FILENO),
+    DEF(STDOUT_FILENO),
     DEF(TCP_NODELAY),
 };
 
