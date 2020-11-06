@@ -22,7 +22,7 @@ http.listen(server.fd, http.SOMAXCONN)
 server.update()
 console.log(JSON.stringify(server))
 os.setReadHandler(server.fd, () => {
-    const client = http.accept(server.fd, server.af)
+    const client = http.accept(server.fd)
     console.log(JSON.stringify({server: server, client: client}))
     http.setsockopt(client.fd, http.IPPROTO_TCP, http.TCP_NODELAY, 0)
     http.setsockopt(client.fd, http.SOL_SOCKET, http.SO_KEEPALIVE, 0)

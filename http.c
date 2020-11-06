@@ -19,29 +19,32 @@
 static JSValue js_accept(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
     int fd, new_fd = -1;
     if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
-    int af;
-    if (JS_ToInt32(ctx, &af, argv[1])) return JS_EXCEPTION;
-    struct sockaddr_in addr;
+    struct sockaddr addr;
+    socklen_t addrlen;
+    int rc = getsockname(fd, &addr, &addrlen);
+    if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
+    struct sockaddr_in addr4;
     struct sockaddr_in6 addr6;
-    switch (af) {
+    switch (addr.sa_family) {
         case AF_INET: {
-            socklen_t sin_size = sizeof(addr);
-            new_fd = accept(fd, (struct sockaddr *)&addr, &sin_size);
+            socklen_t addr4len;
+            new_fd = accept(fd, (struct sockaddr *)&addr4, &addr4len);
         } break;
         case AF_INET6: {
-            socklen_t sin_size = sizeof(addr6);
-            new_fd = accept(fd, (struct sockaddr *)&addr6, &sin_size);
+            socklen_t addr6len;
+            new_fd = accept(fd, (struct sockaddr *)&addr6, &addr6len);
         } break;
+        default: return JS_UNDEFINED;
     }
     if (new_fd < 0) return JS_ThrowInternalError(ctx, "%m");
     JSValue obj = JS_NewObject(ctx);
     if (JS_IsException(obj)) return obj;
     JS_DefinePropertyValueStr(ctx, obj, "fd", JS_NewInt32(ctx, new_fd), JS_PROP_C_W_E);
-    switch (af) {
+    switch (addr.sa_family) {
         case AF_INET: {
             char buf[INET_ADDRSTRLEN];
-            if (inet_ntop(AF_INET, &addr.sin_addr, (char *__restrict)&buf, INET_ADDRSTRLEN)) JS_DefinePropertyValueStr(ctx, obj, "host", JS_NewString(ctx, buf), JS_PROP_C_W_E);
-            JS_DefinePropertyValueStr(ctx, obj, "port", JS_NewInt32(ctx, ntohs(addr.sin_port)), JS_PROP_C_W_E);
+            if (inet_ntop(AF_INET, &addr4.sin_addr, (char *__restrict)&buf, INET_ADDRSTRLEN)) JS_DefinePropertyValueStr(ctx, obj, "host", JS_NewString(ctx, buf), JS_PROP_C_W_E);
+            JS_DefinePropertyValueStr(ctx, obj, "port", JS_NewInt32(ctx, ntohs(addr4.sin_port)), JS_PROP_C_W_E);
             JS_DefinePropertyValueStr(ctx, obj, "family", JS_NewInt32(ctx, AF_INET), JS_PROP_C_W_E);
         } break;
         case AF_INET6: {
@@ -113,22 +116,22 @@ static JSValue js_bind(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
 static JSValue js_getsockname(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
     int fd;
     if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
-    struct sockaddr sa;
+    struct sockaddr addr;
     socklen_t addrlen;
-    int rc = getsockname(fd, &sa, &addrlen);
+    int rc = getsockname(fd, &addr, &addrlen);
     if (rc < 0) return JS_ThrowInternalError(ctx, "%m");
     JSValue obj = JS_NewObject(ctx);
     if (JS_IsException(obj)) return obj;
-    switch (sa.sa_family) {
+    switch (addr.sa_family) {
         case AF_INET: {
-            struct sockaddr_in *addr = (struct sockaddr_in *) &sa;
+            struct sockaddr_in *addr4 = (struct sockaddr_in *)&addr;
             char buf[INET_ADDRSTRLEN];
-            if (inet_ntop(AF_INET, &addr->sin_addr, (char *__restrict)&buf, INET_ADDRSTRLEN)) JS_DefinePropertyValueStr(ctx, obj, "host", JS_NewString(ctx, buf), JS_PROP_C_W_E);
-            JS_DefinePropertyValueStr(ctx, obj, "port", JS_NewInt32(ctx, ntohs(addr->sin_port)), JS_PROP_C_W_E);
+            if (inet_ntop(AF_INET, &addr4->sin_addr, (char *__restrict)&buf, INET_ADDRSTRLEN)) JS_DefinePropertyValueStr(ctx, obj, "host", JS_NewString(ctx, buf), JS_PROP_C_W_E);
+            JS_DefinePropertyValueStr(ctx, obj, "port", JS_NewInt32(ctx, ntohs(addr4->sin_port)), JS_PROP_C_W_E);
             JS_DefinePropertyValueStr(ctx, obj, "family", JS_NewInt32(ctx, AF_INET), JS_PROP_C_W_E);
         } break;
         case AF_INET6: {
-            struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *) &sa;
+            struct sockaddr_in6 *addr6 = (struct sockaddr_in6 *)&addr;
             char buf[INET6_ADDRSTRLEN];
             if (inet_ntop(AF_INET6, &addr6->sin6_addr, (char *__restrict)&buf, INET6_ADDRSTRLEN)) JS_DefinePropertyValueStr(ctx, obj, "host", JS_NewString(ctx, buf), JS_PROP_C_W_E);
             JS_DefinePropertyValueStr(ctx, obj, "port", JS_NewInt32(ctx, ntohs(addr6->sin6_port)), JS_PROP_C_W_E);
@@ -218,7 +221,7 @@ static JSValue js_socket(JSContext *ctx, JSValueConst this_val, int argc, JSValu
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
 static const JSCFunctionListEntry js_http_funcs[] = {
-    JS_CFUNC_DEF("accept", 2, js_accept),
+    JS_CFUNC_DEF("accept", 1, js_accept),
     JS_CFUNC_DEF("bind", 3, js_bind),
     JS_CFUNC_DEF("getsockname", 1, js_getsockname),
     JS_CFUNC_DEF("listen", 2, js_listen),
