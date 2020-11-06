@@ -27,7 +27,7 @@ os.setReadHandler(server.fd, () => { /*try {*/
     http.setsockopt(client.fd, http.SOL_SOCKET, http.SO_KEEPALIVE, 0)
     os.setReadHandler(client.fd, () => { try {
         client.request = http.recv(client.fd, 128, 0)
-        if (client.request.length) {
+        if (client.request && client.request.length) {
             client.response = `${server.rTEXT}${server.text.length}${server.END}${server.text}`
             console.log(JSON.stringify({server: server, client: client}))
             os.setWriteHandler(client.fd, () => { try {

@@ -1,5 +1,5 @@
 #include <arpa/inet.h>
-//#include <errno.h>
+#include <errno.h>
 //#include <linux/limits.h>
 #include <netdb.h>
 //#include <netinet/in.h>
@@ -127,7 +127,6 @@ static JSValue js_loop(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     return JS_UNDEFINED;
 }
 
-#define BUF_SIZE 1024
 static JSValue js_recv(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
     int fd;
     if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
@@ -137,7 +136,10 @@ static JSValue js_recv(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     if (JS_ToInt32(ctx, &flags, argv[2])) return JS_EXCEPTION;
     char buf[size];
     ssize_t len = recv(fd, buf, size, flags);
-    if (len < 0) return JS_ThrowInternalError(ctx, "%m");
+    if (len < 0) {
+        if (errno == ECONNRESET) return JS_NULL;
+        return JS_ThrowInternalError(ctx, "%m");
+    }
     return JS_NewStringLen(ctx, buf, len);
 }
 
