@@ -40,8 +40,7 @@ os.setReadHandler(server.fd, () => {
             client.fd = undefined
             return
         }
-        console.log(JSON.stringify({time: time, server: server, client: client}))
-        if (client.request.length) {
+        if (client.request) {
             client.response = `${rTEXT}${text.length}${END}${text}`
             console.log(JSON.stringify({time: time, server: server, client: client}))
             os.setWriteHandler(client.fd, () => {

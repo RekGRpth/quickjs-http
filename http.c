@@ -113,6 +113,16 @@ typedef struct http_request {
     size_t url;
 } http_request;
 
+static int on_message_begin(http_parser *parser) {
+    http_request *request = parser->data;
+    request->value = JS_NewObject(request->ctx);
+    if (JS_IsException(request->value)) return -1;
+    request->headers = JS_NewArray(request->ctx);
+    if (JS_IsException(request->headers)) { request->value = JS_EXCEPTION; return -1; }
+    JS_DefinePropertyValueStr(request->ctx, request->value, "headers", request->headers, JS_PROP_C_W_E);
+    return 0;
+}
+
 static int set_url(http_parser *parser) {
     http_request *request = parser->data;
     if (request->url) {
@@ -192,7 +202,7 @@ static int on_message_complete(http_parser *parser) {
 }
 
 static const http_parser_settings settings = {
-    .on_message_begin = NULL,
+    .on_message_begin = on_message_begin,
     .on_url = on_url,
     .on_header_field = on_header_field,
     .on_header_value = on_header_value,
@@ -213,11 +223,11 @@ static JSValue js_parse(JSContext *ctx, JSValueConst this_val, int argc, JSValue
     char buf[size];
     http_request request;
     memset(&request, 0, sizeof(request));
-    request.value = JS_NewObject(ctx);
-    if (JS_IsException(request.value)) return request.value;
-    request.headers = JS_NewArray(ctx);
-    if (JS_IsException(request.headers)) return request.headers;
-    JS_DefinePropertyValueStr(ctx, request.value, "headers", request.headers, JS_PROP_C_W_E);
+    request.value = JS_UNDEFINED;
+//    if (JS_IsException(request.value)) return request.value;
+//    request.headers = JS_NewArray(ctx);
+//    if (JS_IsException(request.headers)) return request.headers;
+//    JS_DefinePropertyValueStr(ctx, request.value, "headers", request.headers, JS_PROP_C_W_E);
     request.ctx = ctx;
     dbuf_init(&request.buf);
     http_parser parser;
