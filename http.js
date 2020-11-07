@@ -22,7 +22,7 @@ console.log(JSON.stringify({time: time, server: server}))
 os.setReadHandler(server.fd, () => {
     const client = http.accept(server.fd)
     console.log(JSON.stringify({time: time, server: server, client: client}))
-    os.setTimeout(() => {
+    const timeout = os.setTimeout(() => {
         os.setReadHandler(client.fd, null)
         os.setWriteHandler(client.fd, null)
         os.close(client.fd)
@@ -33,7 +33,9 @@ os.setReadHandler(server.fd, () => {
             client.request = http.recv(client.fd, 128, 0)
         } catch (exception) {
             console.log(JSON.stringify({time: time, server: server, client: client, message: exception.message}))
+            os.clearTimeout(timeout)
             os.setReadHandler(client.fd, null)
+            os.setWriteHandler(client.fd, null)
             os.close(client.fd)
             client.fd = undefined
             return
@@ -48,7 +50,9 @@ os.setReadHandler(server.fd, () => {
                 client.response = undefined
             })
         } else {
+            os.clearTimeout(timeout)
             os.setReadHandler(client.fd, null)
+            os.setWriteHandler(client.fd, null)
             os.close(client.fd)
             client.fd = undefined
         }
