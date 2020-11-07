@@ -17,6 +17,12 @@ console.log(JSON.stringify({time: time, server: server}))
 os.setReadHandler(server.fd, () => {
     const client = http.accept(server.fd)
     console.log(JSON.stringify({time: time, server: server, client: client}))
+    os.setTimeout(() => {
+        os.setReadHandler(client.fd, null)
+        os.setWriteHandler(client.fd, null)
+        os.close(client.fd)
+        client.fd = undefined
+    }, 70 * 1000)
     os.setReadHandler(client.fd, () => {
         client.request = http.recv(client.fd, 128, 0)
         if (client.request && client.request.length) {
