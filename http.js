@@ -30,7 +30,7 @@ os.setReadHandler(server.fd, () => {
     }, 70 * 1000)
     os.setReadHandler(client.fd, () => {
         try {
-            client.request = http.recv(client.fd, 128, 0)
+            client.request = http.parse(client.fd, 128, 0)
         } catch (exception) {
             console.log(JSON.stringify({time: time, server: server, client: client, message: exception.message}))
             os.clearTimeout(timeout)
@@ -40,6 +40,7 @@ os.setReadHandler(server.fd, () => {
             client.fd = undefined
             return
         }
+        console.log(JSON.stringify({time: time, server: server, client: client}))
         if (client.request.length) {
             client.response = `${rTEXT}${text.length}${END}${text}`
             console.log(JSON.stringify({time: time, server: server, client: client}))

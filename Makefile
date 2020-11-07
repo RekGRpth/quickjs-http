@@ -16,6 +16,7 @@ all: $(PROGS)
 LIB_OBJS=$(OBJDIR)/http.o
 
 #LIBS=-lm -ldl -lrt -lhttp_parser -pthread
+LIBS=-lhttp_parser
 
 $(OBJDIR): Makefile
 	mkdir -p $(OBJDIR)

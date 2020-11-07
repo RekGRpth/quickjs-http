@@ -1,10 +1,12 @@
 #include <arpa/inet.h>
 //#include <errno.h>
+#include <http_parser.h>
 //#include <linux/limits.h>
 #include <netdb.h>
 //#include <netinet/in.h>
 #include <netinet/tcp.h>
 //#include <pthread.h>
+#include <quickjs/cutils.h>
 #include <quickjs/quickjs-libc.h>
 //#include <spawn.h>
 //#include <stdio.h>
@@ -16,7 +18,7 @@
 //#include <sys/wait.h>
 #include <unistd.h>
 
-static JSValue js_sockaddr_to_value(JSContext *ctx, const struct sockaddr *addr) {
+static JSValue sockaddr_to_value(JSContext *ctx, const struct sockaddr *addr) {
     JSValue value = JS_NewObject(ctx);
     if (JS_IsException(value)) return value;
     switch (addr->sa_family) {
@@ -51,7 +53,7 @@ static JSValue js_accept(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     int val = 0;
     if (setsockopt(new_fd, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(val)) < 0) return JS_ThrowInternalError(ctx, "setsockopt(%i, %i, %i, %i): %m", new_fd, IPPROTO_TCP, TCP_NODELAY, val);
     if (setsockopt(new_fd, SOL_SOCKET, SO_KEEPALIVE, &val, sizeof(val)) < 0) return JS_ThrowInternalError(ctx, "setsockopt(%i, %i, %i, %i): %m", new_fd, IPPROTO_TCP, TCP_NODELAY, val);
-    JSValue value = js_sockaddr_to_value(ctx, (struct sockaddr *)&addr);
+    JSValue value = sockaddr_to_value(ctx, (struct sockaddr *)&addr);
     if (JS_IsException(value)) return value;
     JS_DefinePropertyValueStr(ctx, value, "fd", JS_NewInt32(ctx, new_fd), JS_PROP_C_W_E);
     return value;
@@ -81,7 +83,7 @@ close_fd:
     }
     if (fd < 0 || !rp) { value = JS_ThrowInternalError(ctx, "bind: %m"); goto free_service; }
     if (listen(fd, backlog) < 0) { value = JS_ThrowInternalError(ctx, "listen: %m"); goto free_service; }
-    value = js_sockaddr_to_value(ctx, rp->ai_addr);
+    value = sockaddr_to_value(ctx, rp->ai_addr);
     if (JS_IsException(value)) goto free_service;
     JS_DefinePropertyValueStr(ctx, value, "fd", JS_NewInt32(ctx, fd), JS_PROP_C_W_E);
     freeaddrinfo(ret);
@@ -96,6 +98,141 @@ ret:
 static JSValue js_loop(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
     js_std_loop(ctx);
     return JS_UNDEFINED;
+}
+
+typedef struct http_request {
+    DynBuf buf;
+    int complete;
+    int header;
+    JSContext *ctx;
+    JSValue headers;
+    JSValue value;
+    size_t body;
+    size_t header_field;
+    size_t header_value;
+    size_t url;
+} http_request;
+
+static int set_url(http_parser *parser) {
+    http_request *request = parser->data;
+    if (request->url) {
+        JSValue value = JS_NewStringLen(request->ctx, request->buf.buf, request->url);
+        if (JS_IsException(value)) { request->value = JS_EXCEPTION; return -1; }
+        JS_DefinePropertyValueStr(request->ctx, request->value, "url", value, JS_PROP_C_W_E);
+        request->url = 0;
+    }
+    return 0;
+}
+
+static int on_url(http_parser *parser, const char *at, size_t length) {
+    http_request *request = parser->data;
+    if (dbuf_write(&request->buf, request->url, at, length) < 0) { request->value = JS_ThrowInternalError(request->ctx, "dbuf_write < 0"); return -1; }
+    request->url += length;
+    return 0;
+}
+
+static int on_headers_complete(http_parser *parser) {
+    http_request *request = parser->data;
+    if (request->header_field) {
+        JSValue field_value = JS_NewObject(request->ctx);
+        if (JS_IsException(field_value)) { request->value = field_value; return -1; }
+        JSValue value = JS_NewStringLen(request->ctx, request->buf.buf + request->header_field, request->header_value);
+        if (JS_IsException(value)) { request->value = value; return -1; }
+        request->buf.buf[request->header_field] = 0;
+        JS_DefinePropertyValueStr(request->ctx, field_value, request->buf.buf, value, JS_PROP_C_W_E);
+        JS_DefinePropertyValueUint32(request->ctx, request->headers, request->header++, field_value, JS_PROP_C_W_E);
+        request->header_field = 0;
+        request->header_value = 0;
+    }
+    return 0;
+}
+
+static int on_header_field(http_parser *parser, const char *at, size_t length) {
+    if (set_url(parser)) return -1;
+    http_request *request = parser->data;
+    if (request->header_value && on_headers_complete(parser)) return -1;
+    if (dbuf_write(&request->buf, request->header_field, at, length) < 0) { request->value = JS_ThrowInternalError(request->ctx, "dbuf_write < 0"); return -1; }
+    request->header_field += length;
+    return 0;
+}
+
+static int on_header_value(http_parser *parser, const char *at, size_t length) {
+    http_request *request = parser->data;
+    if (dbuf_write(&request->buf, request->header_field + request->header_value, at, length) < 0) { request->value = JS_ThrowInternalError(request->ctx, "dbuf_write < 0"); return -1; }
+    request->header_value += length;
+    return 0;
+}
+
+static int on_body(http_parser *parser, const char *at, size_t length) {
+    http_request *request = parser->data;
+    if (dbuf_write(&request->buf, request->body, at, length) < 0) { request->value = JS_ThrowInternalError(request->ctx, "dbuf_write < 0"); return -1; }
+    request->body += length;
+    return 0;
+}
+
+static int on_message_complete(http_parser *parser) {
+    if (set_url(parser)) return -1;
+    http_request *request = parser->data;
+    request->complete = 1;
+    if (request->body) {
+        JSValue value = JS_NewStringLen(request->ctx, request->buf.buf, request->body);
+        if (JS_IsException(value)) { request->value = JS_EXCEPTION; return -1; }
+        JS_DefinePropertyValueStr(request->ctx, request->value, "body", value, JS_PROP_C_W_E);
+    }
+    if (parser->type == HTTP_REQUEST) {
+        JSValue value = JS_NewString(request->ctx, http_method_str(parser->method));
+        if (JS_IsException(value)) { request->value = JS_EXCEPTION; return -1; }
+        JS_DefinePropertyValueStr(request->ctx, request->value, "method", value, JS_PROP_C_W_E);
+    } else {
+        JS_DefinePropertyValueStr(request->ctx, request->value, "status", JS_NewInt32(request->ctx, parser->status_code), JS_PROP_C_W_E);
+    }
+    JS_DefinePropertyValueStr(request->ctx, request->value, "http_major", JS_NewInt32(request->ctx, parser->http_major), JS_PROP_C_W_E);
+    JS_DefinePropertyValueStr(request->ctx, request->value, "http_minor", JS_NewInt32(request->ctx, parser->http_minor), JS_PROP_C_W_E);
+    return 0;
+}
+
+static const http_parser_settings settings = {
+    .on_message_begin = NULL,
+    .on_url = on_url,
+    .on_header_field = on_header_field,
+    .on_header_value = on_header_value,
+    .on_headers_complete = on_headers_complete,
+    .on_body = on_body,
+    .on_message_complete = on_message_complete,
+    .on_chunk_header = NULL,
+    .on_chunk_complete = NULL,
+};
+
+static JSValue js_parse(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+    int fd;
+    if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
+    int size;
+    if (JS_ToInt32(ctx, &size, argv[1])) return JS_EXCEPTION;
+    int flags;
+    if (JS_ToInt32(ctx, &flags, argv[2])) return JS_EXCEPTION;
+    char buf[size];
+    http_request request;
+    memset(&request, 0, sizeof(request));
+    request.value = JS_NewObject(ctx);
+    if (JS_IsException(request.value)) return request.value;
+    request.headers = JS_NewArray(ctx);
+    if (JS_IsException(request.headers)) return request.headers;
+    JS_DefinePropertyValueStr(ctx, request.value, "headers", request.headers, JS_PROP_C_W_E);
+    request.ctx = ctx;
+    dbuf_init(&request.buf);
+    http_parser parser;
+    http_parser_init(&parser, HTTP_REQUEST);
+    parser.data = &request;
+    ssize_t nread;
+    while (!request.complete && (nread = recv(fd, buf, size, flags)) >= 0) {
+        ssize_t parsed = (ssize_t)http_parser_execute(&parser, &settings, buf, nread);
+        if (parsed < nread) { request.value = JS_ThrowInternalError(ctx, "parsed = %li < nread = %li", parsed, nread); goto free_buf; }
+        if (HTTP_PARSER_ERRNO(&parser)) { request.value = JS_ThrowInternalError(ctx, "http_parser_execute: %s", http_errno_description(HTTP_PARSER_ERRNO(&parser))); goto free_buf; }
+    }
+    if (nread < 0) { request.value = JS_ThrowInternalError(ctx, "recv(%i): %m", fd); goto free_buf; }
+free_buf:
+    dbuf_free(&request.buf);
+    return request.value;
 }
 
 static JSValue js_recv(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
@@ -131,6 +268,7 @@ static const JSCFunctionListEntry js_http_funcs[] = {
     JS_CFUNC_DEF("accept", 1, js_accept),
     JS_CFUNC_DEF("listen", 2, js_listen),
     JS_CFUNC_DEF("loop", 0, js_loop),
+    JS_CFUNC_DEF("parse", 3, js_parse),
     JS_CFUNC_DEF("recv", 3, js_recv),
     JS_CFUNC_DEF("send", 3, js_send),
 #define DEF(x) JS_PROP_INT32_DEF(#x, x, JS_PROP_CONFIGURABLE )
