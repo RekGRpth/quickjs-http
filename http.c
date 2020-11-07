@@ -224,17 +224,13 @@ static JSValue js_parse(JSContext *ctx, JSValueConst this_val, int argc, JSValue
     http_request request;
     memset(&request, 0, sizeof(request));
     request.value = JS_UNDEFINED;
-//    if (JS_IsException(request.value)) return request.value;
-//    request.headers = JS_NewArray(ctx);
-//    if (JS_IsException(request.headers)) return request.headers;
-//    JS_DefinePropertyValueStr(ctx, request.value, "headers", request.headers, JS_PROP_C_W_E);
     request.ctx = ctx;
     dbuf_init(&request.buf);
     http_parser parser;
     http_parser_init(&parser, HTTP_REQUEST);
     parser.data = &request;
     ssize_t nread;
-    while (!request.complete && (nread = recv(fd, buf, size, flags)) >= 0) {
+    while (!request.complete && (nread = recv(fd, buf, size, flags)) > 0) {
         ssize_t parsed = (ssize_t)http_parser_execute(&parser, &settings, buf, nread);
         if (parsed < nread) { request.value = JS_ThrowInternalError(ctx, "parsed = %li < nread = %li", parsed, nread); goto free_buf; }
         if (HTTP_PARSER_ERRNO(&parser)) { request.value = JS_ThrowInternalError(ctx, "http_parser_execute: %s", http_errno_description(HTTP_PARSER_ERRNO(&parser))); goto free_buf; }
