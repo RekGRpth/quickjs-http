@@ -2,16 +2,21 @@
 import * as http from "http.so"
 import * as os from "os"
 import * as std from "std"
+const setInterval = (fn, delay) => {
+    const wrapper = () => {
+        fn();
+        return os.setTimeout(wrapper, delay)
+    }
+    os.setTimeout(wrapper, delay)
+}
 const text = 'Hello, World!'
 const END = '\r\n\r\n'
 let time
 let rTEXT
-const update = () => {
+setInterval(() => {
     time = (new Date()).toUTCString()
     rTEXT = `HTTP/1.1 200 OK\r\nServer: j\r\nDate: ${time}\r\nContent-Type: text/plain\r\nContent-Length: `
-    os.setTimeout(update, 1000)
-}
-update()
+}, 1000)
 const server = http.listen('0.0.0.0', '8080', http.SOMAXCONN)
 console.log(JSON.stringify({time: time, server: server}))
 os.setReadHandler(server.fd, () => {
