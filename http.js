@@ -47,6 +47,7 @@ os.setReadHandler(server.fd, () => {
                 let [k, v] = kv.split('=')
                 client.request.vars[k] = v === undefined ? null : v && decodeURIComponent(v)
             }
+            const text = JSON.stringify(client.request)
             client.response = `${rTEXT}${text.length}${END}${text}`
             console.log(JSON.stringify({time: time, server: server, client: client}))
             os.setWriteHandler(client.fd, () => {
