@@ -1,7 +1,7 @@
 //seq $(nproc) | xargs -r -n 1 -P "$(nproc)" qjs http.js
-import * as http from "http.so"
-import * as os from "os"
-import * as std from "std"
+import * as http from 'http.so'
+import * as os from 'os'
+import * as std from 'std'
 const setInterval = (fn, delay) => {
     const wrapper = () => {
         fn()
@@ -41,6 +41,12 @@ os.setReadHandler(server.fd, () => {
             return
         }
         if (client.request) {
+            [client.request.path, client.request.query] = client.request.url && client.request.url.split('?')
+            client.request.vars = {}
+            for (let kv of client.request.query.split('&')) {
+                let [k, v] = kv.split('=')
+                client.request.vars[k] = v === undefined ? null : v && decodeURIComponent(v)
+            }
             client.response = `${rTEXT}${text.length}${END}${text}`
             console.log(JSON.stringify({time: time, server: server, client: client}))
             os.setWriteHandler(client.fd, () => {
