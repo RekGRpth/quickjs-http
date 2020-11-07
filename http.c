@@ -1,5 +1,5 @@
 #include <arpa/inet.h>
-#include <errno.h>
+//#include <errno.h>
 //#include <linux/limits.h>
 #include <netdb.h>
 //#include <netinet/in.h>
@@ -136,10 +136,7 @@ static JSValue js_recv(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     if (JS_ToInt32(ctx, &flags, argv[2])) return JS_EXCEPTION;
     char buf[size];
     ssize_t len = recv(fd, buf, size, flags);
-    if (len < 0) {
-        if (errno == ECONNRESET) return JS_NULL;
-        return JS_ThrowInternalError(ctx, "recv(%i): %m", fd);
-    }
+    if (len < 0) return JS_ThrowInternalError(ctx, "recv(%i): %m", fd);
     return JS_NewStringLen(ctx, buf, len);
 }
 
@@ -152,10 +149,7 @@ static JSValue js_send(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     const char *buf = JS_ToCStringLen(ctx, &len, argv[1]);
     if (!buf) return JS_EXCEPTION;
     ssize_t rc = send(fd, buf, len, flags);
-    if (rc < 0) {
-        if (errno == ENOTSOCK) return JS_NULL;
-        return JS_ThrowInternalError(ctx, "send(%i): %m", fd);
-    }
+    if (rc < 0) return JS_ThrowInternalError(ctx, "send(%i): %m", fd);
     JS_FreeCString(ctx, buf);
     return JS_NewInt32(ctx, rc);
 }
