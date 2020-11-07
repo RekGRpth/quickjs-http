@@ -131,20 +131,6 @@ static JSValue js_send(JSContext *ctx, JSValueConst this_val, int argc, JSValueC
     return JS_NewInt32(ctx, rc);
 }
 
-static JSValue js_setsockopt(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-    int fd;
-    if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
-    int level;
-    if (JS_ToInt32(ctx, &level, argv[1])) return JS_EXCEPTION;
-    int option;
-    if (JS_ToInt32(ctx, &option, argv[2])) return JS_EXCEPTION;
-    int value;
-    if (JS_ToInt32(ctx, &value, argv[3])) return JS_EXCEPTION;
-    int rc = setsockopt(fd, level, option, &value, sizeof(value));
-    if (rc < 0) return JS_ThrowInternalError(ctx, "setsockopt(%i, %i, %i, %i): %m", fd, level, option, value);
-    return JS_UNDEFINED;
-}
-
 #define countof(x) (sizeof(x) / sizeof((x)[0]))
 
 static const JSCFunctionListEntry js_http_funcs[] = {
