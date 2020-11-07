@@ -57,26 +57,6 @@ static JSValue js_accept(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     return value;
 }
 
-static JSValue js_getpeername(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-    int fd;
-    if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
-    struct sockaddr addr;
-    socklen_t addrlen;
-    int rc = getpeername(fd, &addr, &addrlen);
-    if (rc < 0) return JS_ThrowInternalError(ctx, "getpeername(%i), %m", fd);
-    return js_sockaddr_to_value(ctx, &addr);
-}
-
-static JSValue js_getsockname(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
-    int fd;
-    if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
-    struct sockaddr addr;
-    socklen_t addrlen;
-    int rc = getsockname(fd, &addr, &addrlen);
-    if (rc < 0) return JS_ThrowInternalError(ctx, "getsockname(%i), %m", fd);
-    return js_sockaddr_to_value(ctx, &addr);
-}
-
 static JSValue js_listen(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
     JSValue value = JS_EXCEPTION;
     const char *node = JS_ToCString(ctx, argv[0]);
@@ -169,8 +149,6 @@ static JSValue js_setsockopt(JSContext *ctx, JSValueConst this_val, int argc, JS
 
 static const JSCFunctionListEntry js_http_funcs[] = {
     JS_CFUNC_DEF("accept", 1, js_accept),
-    JS_CFUNC_DEF("getpeername", 1, js_getpeername),
-    JS_CFUNC_DEF("getsockname", 1, js_getsockname),
     JS_CFUNC_DEF("listen", 2, js_listen),
     JS_CFUNC_DEF("loop", 0, js_loop),
     JS_CFUNC_DEF("recv", 3, js_recv),
