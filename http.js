@@ -4,7 +4,7 @@ import * as os from "os"
 import * as std from "std"
 const setInterval = (fn, delay) => {
     const wrapper = () => {
-        fn();
+        fn()
         return os.setTimeout(wrapper, delay)
     }
     os.setTimeout(wrapper, delay)
