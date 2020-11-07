@@ -45,7 +45,7 @@ static JSValue js_accept(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     int fd;
     if (JS_ToInt32(ctx, &fd, argv[0])) return JS_EXCEPTION;
     struct sockaddr_storage addr;
-    socklen_t addrlen;
+    socklen_t addrlen = sizeof(addr);
     int new_fd = accept(fd, (struct sockaddr *)&addr, &addrlen);
     if (new_fd < 0) return JS_ThrowInternalError(ctx, "accept(%i): %m", fd);
     int val = 0;
