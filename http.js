@@ -29,8 +29,16 @@ os.setReadHandler(server.fd, () => {
         client.fd = undefined
     }, 70 * 1000)
     os.setReadHandler(client.fd, () => {
-        client.request = http.recv(client.fd, 128, 0)
-        if (client.request && client.request.length) {
+        try {
+            client.request = http.recv(client.fd, 128, 0)
+        } catch (exception) {
+            console.log(JSON.stringify({time: time, server: server, client: client, message: exception.message}))
+            os.setReadHandler(client.fd, null)
+            os.close(client.fd)
+            client.fd = undefined
+            return
+        }
+        if (client.request.length) {
             client.response = `${rTEXT}${text.length}${END}${text}`
             console.log(JSON.stringify({time: time, server: server, client: client}))
             os.setWriteHandler(client.fd, () => {
