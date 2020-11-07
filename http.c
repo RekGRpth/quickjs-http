@@ -85,17 +85,8 @@ static JSValue js_listen(JSContext *ctx, JSValueConst this_val, int argc, JSValu
     if (!service) goto free_node;
     int backlog;
     if (JS_ToInt32(ctx, &backlog, argv[2])) goto free_service;
-    const struct addrinfo hints = {
-        .ai_flags = AI_PASSIVE,
-        .ai_family = AF_UNSPEC,
-        .ai_socktype = SOCK_STREAM,
-        .ai_protocol = 0,
-        .ai_addrlen = 0,
-        .ai_addr = NULL,
-        .ai_canonname = NULL,
-        .ai_next = NULL
-    };
-    struct addrinfo *ret, *rp = NULL;
+    struct addrinfo hints, *ret, *rp = NULL;
+    memset(&hints, 0, sizeof(hints));
     if (getaddrinfo(node, service, &hints, &ret) < 0) { value = JS_ThrowInternalError(ctx, "getaddrinfo: %m"); goto free_service; }
     int fd = -1;
     for (rp = ret; rp; rp = rp->ai_next) {
